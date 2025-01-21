@@ -1,0 +1,5 @@
+docker run -d --name=prometheus -p 9090:9090 \
+  -v /home/faridig/dev_ia/monitoring_api/prometheus.yml:/etc/prometheus/prometheus.yml \
+  prom/prometheus
+
+  
