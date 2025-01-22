@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import joblib
 import pandas as pd
+import time
+from api.metrics import record_prediction_metrics  # Importer la fonction pour enregistrer les métriques
 
 # Charger le modèle
 MODEL_PATH = "models/model.pkl"
@@ -27,7 +29,6 @@ class PredictionRequest(BaseModel):
 
 class PredictionResponse(BaseModel):
     prediction: int
-
 
 # Créer un routeur pour les prédictions
 predict_router = APIRouter()
@@ -89,6 +90,9 @@ def predict(request: PredictionRequest):
     """
     Effectue une prédiction basée sur les caractéristiques d'une fleur Iris.
     """
+    start_time = time.time()  # Démarre le suivi de la latence
+    success = True
+
     try:
         # Convertir les données reçues en DataFrame
         input_data = pd.DataFrame([request.dict()])
@@ -98,7 +102,14 @@ def predict(request: PredictionRequest):
         
         # Faire une prédiction avec le modèle
         prediction = model.predict(input_data)[0]
-        return {"prediction": int(prediction)}
     except Exception as e:
-        # Gérer les erreurs de prédiction
+        success = False
+        # Enregistrer la métrique d'erreur
+        record_prediction_metrics(latency=0, success=success)
         raise HTTPException(status_code=500, detail="Une erreur est survenue lors de la prédiction.")
+    
+    latency = time.time() - start_time  # Calculer la latence
+    # Enregistrer les métriques
+    record_prediction_metrics(latency=latency, success=success)
+
+    return {"prediction": int(prediction)}
