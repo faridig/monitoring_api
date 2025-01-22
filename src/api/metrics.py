@@ -1,6 +1,11 @@
 from fastapi import APIRouter, FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_client import Counter, Histogram, Gauge
+import logging
+
+# Configurer le logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Créer un routeur pour les métriques
 metrics_router = APIRouter()
@@ -39,6 +44,7 @@ async def prometheus_metrics():
     """
     Endpoint exposant les métriques au format compatible avec Prometheus.
     """
+    logger.info("Endpoint /metrics appelé pour exposer les métriques Prometheus.")
     pass  # Les métriques sont gérées automatiquement par Prometheus FastAPI Instrumentator
 
 
@@ -50,10 +56,15 @@ def record_prediction_metrics(latency: float, success: bool):
     :param latency: Temps pris pour effectuer la prédiction (en secondes).
     :param success: Indique si la prédiction a réussi ou échoué.
     """
-    prediction_count.inc()  # Incrémenter le compteur de prédictions
-    latency_histogram.observe(latency)  # Enregistrer la latence
-    if not success:
-        error_count.inc()  # Incrémenter le compteur d'erreurs
+    try:
+        prediction_count.inc()  # Incrémenter le compteur de prédictions
+        latency_histogram.observe(latency)  # Enregistrer la latence
+        if not success:
+            error_count.inc()  # Incrémenter le compteur d'erreurs
+            logger.warning("Erreur détectée lors de la prédiction.")
+        logger.info(f"Métriques de prédiction enregistrées : Latence={latency}s, Succès={success}.")
+    except Exception as e:
+        logger.error(f"Erreur lors de l'enregistrement des métriques de prédiction : {e}")
 
 
 # Mise à jour des métriques de concept drift
@@ -64,8 +75,12 @@ def update_drift_metrics(drift_detected: bool, magnitude: float = 0.0):
     :param drift_detected: Indique si un concept drift a été détecté (True/False).
     :param magnitude: Magnitude du concept drift détecté.
     """
-    concept_drift_detected.set(1 if drift_detected else 0)  # Indique si un drift est détecté
-    drift_magnitude.set(magnitude)  # Enregistre la magnitude du drift
+    try:
+        concept_drift_detected.set(1 if drift_detected else 0)  # Indique si un drift est détecté
+        drift_magnitude.set(magnitude)  # Enregistre la magnitude du drift
+        logger.info(f"Métriques de drift mises à jour : Drift détecté={drift_detected}, Magnitude={magnitude}.")
+    except Exception as e:
+        logger.error(f"Erreur lors de la mise à jour des métriques de drift : {e}")
 
 
 # Configuration de l'instrumentateur Prometheus
@@ -75,4 +90,8 @@ def configure_metrics(app: FastAPI):
 
     :param app: Instance FastAPI à instrumenter.
     """
-    instrumentator.instrument(app).expose(app)
+    try:
+        instrumentator.instrument(app).expose(app)
+        logger.info("Prometheus FastAPI Instrumentator configuré et exposé avec succès.")
+    except Exception as e:
+        logger.error(f"Erreur lors de la configuration de Prometheus FastAPI Instrumentator : {e}")

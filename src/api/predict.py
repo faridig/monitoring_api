@@ -3,10 +3,12 @@ from pydantic import BaseModel
 import joblib
 import pandas as pd
 import time
-from api.metrics import record_prediction_metrics  # Importer la fonction pour enregistrer les métriques
+import os
+from src.api.metrics import record_prediction_metrics  # Importer la fonction pour enregistrer les métriques
 
 # Charger le modèle
 MODEL_PATH = "models/model.pkl"
+CURRENT_DATA_PATH = "data/current.csv"
 try:
     model = joblib.load(MODEL_PATH)
 except FileNotFoundError:
@@ -32,6 +34,20 @@ class PredictionResponse(BaseModel):
 
 # Créer un routeur pour les prédictions
 predict_router = APIRouter()
+
+def save_to_current_csv(data: pd.DataFrame, file_path: str):
+    """
+    Sauvegarde ou met à jour les données dans le fichier current.csv.
+
+    :param data: Données reçues sous forme de DataFrame.
+    :param file_path: Chemin du fichier à mettre à jour.
+    """
+    if not os.path.exists(file_path):  # Vérifie si le fichier n'existe pas
+        data.to_csv(file_path, index=False)  # Crée le fichier avec les données reçues
+    else:
+        existing_data = pd.read_csv(file_path)  # Charge les données existantes
+        updated_data = pd.concat([existing_data, data], ignore_index=True)  # Ajoute les nouvelles données
+        updated_data.to_csv(file_path, index=False)  # Sauvegarde les données mises à jour
 
 @predict_router.post(
     "/",
@@ -102,6 +118,10 @@ def predict(request: PredictionRequest):
         
         # Faire une prédiction avec le modèle
         prediction = model.predict(input_data)[0]
+
+        # Sauvegarder les données dans current.csv
+        save_to_current_csv(input_data, CURRENT_DATA_PATH)
+
     except Exception as e:
         success = False
         # Enregistrer la métrique d'erreur
