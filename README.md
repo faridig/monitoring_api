@@ -113,7 +113,7 @@ Voici les métriques surveillées dans le système :
 ### Étapes
 1. Clonez le projet :
    ```bash
-   git clone <url-du-repo>
+   git clone https://github.com/faridig/monitoring_api.git
    cd monitoring_api
    ```
 
