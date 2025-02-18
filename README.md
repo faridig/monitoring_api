@@ -119,7 +119,7 @@ Voici les métriques surveillées dans le système :
 
 2. Construisez et démarrez les services Docker :
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
 
 3. Accédez à l'API :
